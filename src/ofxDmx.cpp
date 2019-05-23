@@ -27,17 +27,39 @@ ofxDmx::~ofxDmx() {
 
 bool ofxDmx::connect(int device, unsigned int channels) {
 	serial.listDevices();
+    deviceString = "index " + ofToString(device);
 	connected = serial.setup(device, 57600); 
 	setChannels(channels);
 	return connected;
 }
 
-bool ofxDmx::connect(string device, unsigned int channels) {
-	serial.listDevices();
-	connected = serial.setup(device.c_str(), 57600);
-	setChannels(channels);
-	return connected;
+bool ofxDmx::connect(std::string device, unsigned int channels) {
+    serial.listDevices();
+    
+     vector<ofSerialDeviceInfo> serialDevices = serial.getDeviceList();
+    
+//     string deviceLine;
+     for(int i=0; i<serialDevices.size();i++){
+         deviceString = serialDevices[i].getDeviceName().c_str();
+         
+         if(ofIsStringInString(deviceString, device)){
+             connected = serial.setup(deviceString.c_str(), 57600);
+             setChannels(channels);
+             return connected;
+         }
+     }
+    
 }
+
+std::string ofxDmx::getDeviceString(){
+    return deviceString;
+}
+//bool ofxDmx::connect(std::string device, unsigned int channels) {
+//    serial.listDevices();
+//    connected = serial.setup(device.c_str(), 57600);
+//    setChannels(channels);
+//    return connected;
+//}
 
 bool ofxDmx::isConnected() {
 	return connected;
@@ -66,7 +88,7 @@ void ofxDmx::activateMk2(unsigned char key0, unsigned char key1, unsigned char k
 	// step 1: set API -key
 	unsigned int dataSize = 4;
 	unsigned int packetSize = DMX_PRO_HEADER_SIZE + dataSize + DMX_PRO_END_SIZE;
-	vector<unsigned char> packet(packetSize);
+	std::vector<unsigned char> packet(packetSize);
 	
 	// header
 	packet[0] = DMX_PRO_START_MSG;
@@ -94,7 +116,7 @@ void ofxDmx::activateMk2(unsigned char key0, unsigned char key1, unsigned char k
 	// step 2, enable both ports
 	dataSize = 2;
 	packetSize = DMX_PRO_HEADER_SIZE + dataSize + DMX_PRO_END_SIZE;
-	vector<unsigned char> packet2(packetSize);
+	std::vector<unsigned char> packet2(packetSize);
 	
 	// header
 	packet2[0] = DMX_PRO_START_MSG;
@@ -119,14 +141,17 @@ void ofxDmx::activateMk2(unsigned char key0, unsigned char key1, unsigned char k
 }
 
 void ofxDmx::update(bool force) {
+    
+//    ofLog()<<"dmx needsUpdate "<<needsUpdate<<" force "<<force;
 	if(needsUpdate || force) {
 		needsUpdate = false;
 
+//        ofLog()<<"dmx levels[0] "<<levels[0];
 		for (unsigned int i=0; i<universes; i++) {
 
 			unsigned int dataSize = levels.size() + DMX_START_CODE_SIZE;
 			unsigned int packetSize = DMX_PRO_HEADER_SIZE + dataSize + DMX_PRO_END_SIZE;
-			vector<unsigned char> packet(packetSize);
+			std::vector<unsigned char> packet(packetSize);
 			
 			// header
 			packet[0] = DMX_PRO_START_MSG;
@@ -197,10 +222,24 @@ void ofxDmx::clear() {
 	}
 }
 
-unsigned char ofxDmx::getLevel(unsigned int channel) {
-	if(badChannel(channel)) {
-		return 0;
-	}
-	channel--; // convert from 1-initial to 0-initial
-	return levels[channel];
+//unsigned char ofxDmx::getLevel(unsigned int channel) {
+//    if(badChannel(channel)) {
+//        return 0;
+//    }
+//    channel--; // convert from 1-initial to 0-initial
+//    return levels[channel];
+//}
+unsigned char ofxDmx::getLevel(unsigned int channel, unsigned int universe) {
+    if(badChannel(channel)) {
+        return 0;
+    }
+    channel--; // convert from 1-initial to 0-initial
+    
+    if (universe == 1) {
+        return levels[channel];
+    } else if (universe == 2) {
+        return levels2[channel];
+    }
+    //    return levels[channel];
 }
+
